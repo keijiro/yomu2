@@ -42,7 +42,7 @@ def get_api_key():
             check=True, capture_output=True, text=True)
     except subprocess.CalledProcessError:
         die(f"API key not found in keychain (service: '{KEYCHAIN_SERVICE}'). "
-            "See README.md for how to register it.")
+            "See implementation.md for how to register it.")
     return out.stdout.strip()
 
 
