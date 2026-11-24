@@ -1,0 +1,15 @@
+[package]
+name = "yomu"
+version = "0.1.0"
+edition = "2024"
+description = "TUI script editor and narrator using Gemini TTS voice replication"
+
+[dependencies]
+base64 = "0.23.1"
+ratatui = "0.30.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+serde_norway = "0.9.42"
+textwrap = "0.16.4"
+unicode-width = "0.2.3"
+ureq = "3.5.2"
