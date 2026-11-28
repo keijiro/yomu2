@@ -1,4 +1,4 @@
-# clone_tts.py
+# Gemini TTS voice replication notes
 
 A one-shot script that uses **Voice replication (voice cloning)** in Gemini 3.8 Flash TTS
 to generate speech in the voice of any given speaker.
@@ -56,10 +56,10 @@ Notes:
 ## 3. Register the voice
 
 ```sh
-python3 clone_tts.py register --source source.m4a --consent consent.m4a --name "my-voice"
+yomu voice register --source source.m4a --consent consent.m4a --name "my-voice"
 ```
 
-On success, a `voice_...` ID is displayed and saved to `.voice_id` in the same folder as the script.
+On success, a `voice_...` ID is displayed. Copy it into the `voice:` field of the script (`yomu voice list` shows it again later).
 
 - Registered voices are stored in the project and remain valid for **1 year from last use** (up to 200 per project)
 - With `--stateless`, a `voicekey_...` that isn't stored on the server is issued instead (**valid for 7 days**).
@@ -67,32 +67,17 @@ On success, a `voice_...` ID is displayed and saved to `.voice_id` in the same f
 
 ## 4. Generate speech
 
-```sh
-python3 clone_tts.py speak --text "こんにちは、今日もよろしくお願いします。" -o hello.wav
-```
-
-Options:
-
-| Option | Description |
-|---|---|
-| `--text TEXT` / `--text-file PATH` | Text to speak (one of them is required) |
-| `--style TEXT` | Speaking style instructions (e.g. `--style "calm tone, speak slowly"`) |
-| `--voice ID` | Voice to use. Defaults to the value in `.voice_id` |
-| `-o PATH` | Output file (default: `out.wav`; 24kHz / mono / 16-bit WAV) |
-| `--model NAME` | Specify **before** the subcommand. Use `gemini-3.8-flash-lite-tts` for the cheaper model |
-
-You can insert tags such as `<laugh>`, `<sigh>`, and `<short pause>` into the text to add laughter, sighs, and pauses.
-
-```sh
-python3 clone_tts.py --model gemini-3.8-flash-lite-tts speak --text-file script.txt --style "cheerful" -o out.wav
-afplay out.wav
-```
+Put the voice ID in the `voice:` field of `script.md` and use the yomu TUI
+(see [README.md](README.md)). Style directions and tags such as `<laugh>`,
+`<sigh>`, and `<short pause>` can be written directly in the script text to
+add laughter, sighs, and pauses. Set `model: gemini-3.8-flash-lite-tts` for the
+cheaper model.
 
 ## 5. Manage voices
 
 ```sh
-python3 clone_tts.py list                 # List registered voices
-python3 clone_tts.py delete voice_xxxxx   # Delete (cannot be undone)
+yomu voice list                 # List registered voices
+yomu voice delete voice_xxxxx   # Delete (cannot be undone)
 ```
 
 ## Pricing guide (through 2026-12-31, Standard)

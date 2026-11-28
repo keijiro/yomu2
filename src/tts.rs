@@ -21,12 +21,28 @@ pub struct Request {
 
 /// Synthesizes speech and returns WAV file bytes. Blocking.
 pub fn synthesize(req: &Request) -> Result<Vec<u8>, String> {
+    let json = call("POST", "/interactions", Some(request_body(req)))?;
+    let (data, mime) = extract_audio(&json)?;
+    let bytes = BASE64_STANDARD
+        .decode(data)
+        .map_err(|e| format!("invalid audio data: {e}"))?;
+    Ok(to_wav(bytes, mime))
+}
+
+/// Calls a Gemini API endpoint and returns the JSON response. Blocking.
+pub fn call(method: &str, path: &str, body: Option<Value>) -> Result<Value, String> {
     let key = api_key()?;
-    let mut res = agent()
-        .post(format!("{API_BASE}/interactions"))
+    let url = format!("{API_BASE}{path}");
+    let a = agent();
+    let builder = match method {
+        "GET" => a.get(&url).force_send_body(),
+        "DELETE" => a.delete(&url).force_send_body(),
+        _ => a.post(&url),
+    };
+    let mut res = builder
         .header("x-goog-api-key", key.as_str())
         .header("Content-Type", "application/json")
-        .send(request_body(req).to_string())
+        .send(body.map(|b| b.to_string()).unwrap_or_default())
         .map_err(|e| format!("request failed: {e}"))?;
     let status = res.status();
     let raw = res
@@ -38,12 +54,10 @@ pub fn synthesize(req: &Request) -> Result<Vec<u8>, String> {
     if !status.is_success() {
         return Err(format!("HTTP {}: {}", status.as_u16(), error_message(&raw)));
     }
-    let json: Value = serde_json::from_slice(&raw).map_err(|e| format!("invalid response: {e}"))?;
-    let (data, mime) = extract_audio(&json)?;
-    let bytes = BASE64_STANDARD
-        .decode(data)
-        .map_err(|e| format!("invalid audio data: {e}"))?;
-    Ok(to_wav(bytes, mime))
+    if raw.is_empty() {
+        return Ok(Value::Null);
+    }
+    serde_json::from_slice(&raw).map_err(|e| format!("invalid response: {e}"))
 }
 
 fn agent() -> &'static ureq::Agent {

@@ -111,8 +111,7 @@ impl App {
                 Some(DiskState { modified, content }),
             )
         } else {
-            let voice = fs::read_to_string(path.with_file_name(".voice_id")).ok();
-            (Script::template(voice.as_deref().map(str::trim)), None)
+            (Script::template(), None)
         };
         let (tx, rx) = mpsc::channel();
         let mut app = Self {

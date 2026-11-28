@@ -8,8 +8,8 @@ into speech, paragraph by paragraph, using Gemini TTS voice replication.
 - macOS (uses the keychain via `security` and plays audio with `afplay`)
 - A Gemini API key in the keychain (service `gemini-api-key`, or set
   `GEMINI_KEYCHAIN_SERVICE`). See [implementation.md](implementation.md).
-- A replicated voice ID (`voice_...`). Register one with the prototype script:
-  `python3 clone_tts.py register --source source.wav --consent consent.wav`
+- A replicated voice ID (`voice_...`). Register one with `yomu voice register`
+  (see below).
 
 ## Build and run
 
@@ -19,9 +19,20 @@ yomu                       # opens ./script.md
 yomu path/to/other.md
 ```
 
-If the file doesn't exist, yomu starts from a template. When there's a
-`.voice_id` file next to the script, its voice ID goes into the template.
-The file is created on the first edit.
+If the file doesn't exist, yomu starts from a template. The file is created
+on the first edit.
+
+## Voice management
+
+```sh
+yomu voice register --source source.wav --consent consent.wav [--name NAME] [--stateless]
+yomu voice list
+yomu voice delete voice_xxxxxxxxxxxx
+```
+
+`register` prints the new voice ID; copy it into the `voice:` field of the
+script. Use `list` to look it up again later. Input audio is converted with
+`afconvert`, so any format it can read works.
 
 ## Script format
 

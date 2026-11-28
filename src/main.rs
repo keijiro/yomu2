@@ -4,6 +4,7 @@ mod editor;
 mod script;
 mod tts;
 mod ui;
+mod voice;
 
 use app::App;
 use ratatui::DefaultTerminal;
@@ -20,6 +21,7 @@ const USAGE: &str = "\
 yomu - script editor and narrator (Gemini TTS voice replication)
 
 Usage: yomu [SCRIPT]    (default: script.md)
+       yomu voice register|list|delete   (manage voices; see `yomu voice`)
 
 Keys:
   arrows / h j k l  move cursor          Enter  edit the selected cell
@@ -30,8 +32,18 @@ Keys:
 ";
 
 fn main() -> ExitCode {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.first().map(String::as_str) == Some("voice") {
+        return match voice::run(&args[1..]) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("error: {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     let mut path = PathBuf::from("script.md");
-    for arg in std::env::args().skip(1) {
+    for arg in args {
         match arg.as_str() {
             "-h" | "--help" => {
                 print!("{USAGE}");

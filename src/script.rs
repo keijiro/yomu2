@@ -81,10 +81,9 @@ impl Script {
     }
 
     /// A new, empty script with a front matter template.
-    pub fn template(voice: Option<&str>) -> Self {
-        let voice = voice.unwrap_or("");
+    pub fn template() -> Self {
         Self::parse(&format!(
-            "---\nvoice: {voice}\nmodel: {DEFAULT_MODEL}\nstyle:\n---\n"
+            "---\nvoice:\nmodel: {DEFAULT_MODEL}\nstyle:\n---\n"
         ))
     }
 
@@ -321,8 +320,8 @@ mod tests {
         let s = Script::parse("---\r\nvoice: v\r\n---\r\nA\r\n\r\nB\r\n");
         assert_eq!(s.voice(), Some("v"));
         assert_eq!(s.paragraphs.len(), 2);
-        let t = Script::template(Some("voice_x"));
-        assert_eq!(t.voice(), Some("voice_x"));
+        let t = Script::template();
+        assert_eq!(t.voice(), None);
         assert_eq!(t.global_style(), None);
         assert!(t.paragraphs.is_empty());
     }
