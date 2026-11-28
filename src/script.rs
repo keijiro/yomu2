@@ -20,6 +20,7 @@
 use serde::Deserialize;
 
 pub const DEFAULT_MODEL: &str = "gemini-3.8-flash-tts";
+pub const LITE_MODEL: &str = "gemini-3.8-flash-lite-tts";
 
 /// Global options from the YAML front matter.
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -109,6 +110,49 @@ impl Script {
         out
     }
 
+    /// Sets (or removes, when `value` is `None`) a top-level front matter
+    /// key, leaving the rest of the front matter untouched.
+    pub fn set_header_value(&mut self, key: &str, value: Option<&str>) -> Result<(), String> {
+        if self.header_error.is_some() {
+            return Err("The front matter is invalid; fix it in the file first.".into());
+        }
+        let new_line = value.map(|v| format!("{key}: {}", yaml_scalar(v)));
+        let mut lines: Vec<String> = if self.front_matter.is_empty() {
+            vec!["---".into(), "---".into()]
+        } else {
+            self.front_matter.lines().map(str::to_string).collect()
+        };
+        let prefix = format!("{key}:");
+        let at = lines
+            .iter()
+            .enumerate()
+            .skip(1)
+            .take(lines.len().saturating_sub(2))
+            .find(|(_, l)| l.starts_with(&prefix))
+            .map(|(i, _)| i);
+        match (at, new_line) {
+            (Some(i), new_line) => {
+                // Drop continuation lines of a multi-line value.
+                let mut end = i + 1;
+                while end < lines.len() - 1
+                    && lines[end].starts_with(|c: char| c == ' ' || c == '\t')
+                {
+                    end += 1;
+                }
+                lines.splice(i..end, new_line);
+            }
+            (None, Some(line)) => {
+                let close = lines.len() - 1;
+                lines.insert(close, line);
+            }
+            (None, None) => {}
+        }
+        self.front_matter = lines.join("\n");
+        let yaml = lines[1..lines.len() - 1].join("\n");
+        self.header = parse_header(&yaml)?;
+        Ok(())
+    }
+
     pub fn voice(&self) -> Option<&str> {
         self.header.voice.as_deref()
     }
@@ -145,6 +189,27 @@ pub fn clean_style(s: &str) -> String {
         .collect::<Vec<_>>()
         .join(" ")
         .replace("-->", "->")
+}
+
+/// Formats a string as a single-line YAML scalar, quoting it if needed.
+fn yaml_scalar(v: &str) -> String {
+    let plain = !v.is_empty()
+        && v == v.trim()
+        && !v.starts_with(|c: char| "-?:,[]{}#&*!|>'\"%@`".contains(c))
+        && !v.contains(": ")
+        && !v.contains(" #")
+        && !v.ends_with(':')
+        && !v.contains(['\n', '\r']);
+    if plain {
+        v.to_string()
+    } else {
+        let escaped = v
+            .replace('\\', "\\\\")
+            .replace('"', "\\\"")
+            .replace('\n', "\\n")
+            .replace('\r', "\\r");
+        format!("\"{escaped}\"")
+    }
 }
 
 /// Splits `src` into (raw front matter, YAML content, body).
@@ -260,6 +325,24 @@ mod tests {
         assert_eq!(t.voice(), Some("voice_x"));
         assert_eq!(t.global_style(), None);
         assert!(t.paragraphs.is_empty());
+    }
+
+    #[test]
+    fn set_header_value_edits_front_matter() {
+        let mut s = Script::parse("---\n# c\nvoice: v\nstyle: old\n  more\n---\nText.\n");
+        s.set_header_value("style", Some("new: \"x\"")).unwrap();
+        assert_eq!(s.global_style(), Some("new: \"x\""));
+        s.set_header_value("model", Some(LITE_MODEL)).unwrap();
+        assert_eq!(s.model(), LITE_MODEL);
+        s.set_header_value("style", None).unwrap();
+        assert_eq!(s.global_style(), None);
+        assert_eq!(
+            s.render(),
+            format!("---\n# c\nvoice: v\nmodel: {LITE_MODEL}\n---\n\nText.\n")
+        );
+        let mut n = Script::parse("Hi.\n");
+        n.set_header_value("style", Some("calm")).unwrap();
+        assert_eq!(n.render(), "---\nstyle: calm\n---\n\nHi.\n");
     }
 
     #[test]

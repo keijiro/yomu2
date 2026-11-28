@@ -183,6 +183,11 @@ fn draw_keys(frame: &mut Frame, app: &App, area: Rect) {
             ("Alt+Enter", "newline"),
             ("^U/^K", "kill"),
         ],
+        Some(edit) if edit.field == Field::GlobalStyle => &[
+            ("Enter", "save"),
+            ("Esc", "cancel"),
+            ("blank", "= no global style"),
+        ],
         Some(_) => &[
             ("Enter", "save"),
             ("Esc", "cancel"),
@@ -193,6 +198,8 @@ fn draw_keys(frame: &mut Frame, app: &App, area: Rect) {
             ("r", "synth"),
             ("Space", "play"),
             ("e", "export"),
+            ("m", "model"),
+            ("s", "global style"),
             ("o/O", "add"),
             ("dd", "del"),
             ("u", "undo"),
@@ -225,6 +232,7 @@ fn draw_editor(frame: &mut Frame, app: &mut App, body: Rect) {
     let title = match edit.field {
         Field::Text => format!(" Edit text · paragraph {} ", edit.index + 1),
         Field::Style => format!(" Edit style · paragraph {} ", edit.index + 1),
+        Field::GlobalStyle => " Edit global style ".to_string(),
     };
     let block = Block::bordered()
         .title(title)

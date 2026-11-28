@@ -20,13 +20,15 @@ const DISK_CHECK_INTERVAL: Duration = Duration::from_millis(500);
 pub enum Field {
     Style,
     Text,
+    /// The global style in the front matter (edited via a popup only).
+    GlobalStyle,
 }
 
 impl Field {
     /// Column index in the table (#, status, style, text).
     pub fn column(self) -> usize {
         match self {
-            Field::Style => 2,
+            Field::Style | Field::GlobalStyle => 2,
             Field::Text => 3,
         }
     }
@@ -257,6 +259,8 @@ impl App {
             KeyCode::Char('d') => self.pending_d = true,
             KeyCode::Char('u') => self.undo(),
             KeyCode::Char('e') => self.export(),
+            KeyCode::Char('m') => self.toggle_model(),
+            KeyCode::Char('s') => self.begin_global_style_edit(),
             KeyCode::Esc => self.message = None,
             _ => {}
         }
@@ -266,7 +270,7 @@ impl App {
         if let Some(edit) = &mut self.edit {
             let text = match edit.field {
                 Field::Text => text.to_string(),
-                Field::Style => text.replace(['\r', '\n'], " "),
+                Field::Style | Field::GlobalStyle => text.replace(['\r', '\n'], " "),
             };
             edit.editor.insert_str(&text);
         }
@@ -357,7 +361,9 @@ impl App {
         let p = &self.script.paragraphs[index];
         let initial = match field {
             Field::Text => p.text.clone(),
-            Field::Style => self.script.effective_style(p).unwrap_or("").to_string(),
+            Field::Style | Field::GlobalStyle => {
+                self.script.effective_style(p).unwrap_or("").to_string()
+            }
         };
         self.field = field;
         self.edit = Some(Edit {
@@ -366,6 +372,36 @@ impl App {
             index,
             is_new,
         });
+    }
+
+    fn begin_global_style_edit(&mut self) {
+        let initial = self.script.global_style().unwrap_or("");
+        self.edit = Some(Edit {
+            editor: Editor::new(initial),
+            field: Field::GlobalStyle,
+            index: 0,
+            is_new: false,
+        });
+    }
+
+    fn toggle_model(&mut self) {
+        let next = if self.script.model() == script::LITE_MODEL {
+            script::DEFAULT_MODEL
+        } else {
+            script::LITE_MODEL
+        };
+        match self.script.set_header_value("model", Some(next)) {
+            Ok(()) => {
+                self.save();
+                let label = if next == script::LITE_MODEL {
+                    "lite"
+                } else {
+                    "standard"
+                };
+                self.info(format!("Model: {next} ({label})"));
+            }
+            Err(e) => self.error(e),
+        }
     }
 
     fn insert_paragraph(&mut self, index: usize) {
@@ -412,6 +448,16 @@ impl App {
                     self.push_undo();
                     self.script.paragraphs[i].text = text;
                     self.save();
+                }
+            }
+            Field::GlobalStyle => {
+                let style = script::clean_style(&value);
+                let style = Some(style.as_str()).filter(|s| !s.is_empty());
+                if style != self.script.global_style() {
+                    match self.script.set_header_value("style", style) {
+                        Ok(()) => self.save(),
+                        Err(e) => self.error(e),
+                    }
                 }
             }
             Field::Style => {

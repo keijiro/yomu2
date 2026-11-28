@@ -66,6 +66,8 @@ in a normalized form: one blank line between paragraphs.
 | `r`                     | Synthesize the selected paragraph               |
 | `Space`                 | Play / stop the paragraph (when synthesized)    |
 | `e`                     | Export the audio as numbered files              |
+| `m`                     | Toggle the model: standard / lite               |
+| `s`                     | Edit the global style                           |
 | `o` / `O`               | Add a paragraph below / above                   |
 | `dd`                    | Delete the paragraph                            |
 | `u`                     | Undo                                            |
